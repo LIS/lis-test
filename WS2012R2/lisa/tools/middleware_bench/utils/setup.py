@@ -182,7 +182,8 @@ class SetupTestEnv:
                                                   self.connector.localpath,
                                                   self.connector.key_name + '.pem'))
                 ip = ssh_client[i].run(
-                        'ifconfig eth0 | grep "inet\ addr" | cut -d: -f2 | cut -d" " -f1')
+                        'ifconfig eth0 | grep "inet" | cut -d: -f2 | awk -F " " \'{print $2}\' | head -n 1')
+                log.info('vm ip {}'.format(ip))
                 vm_ips[i] = ip[1].strip()
             elif self.provider == constants.GCE:
                 ssh_client[i] = self.connector.wait_for_ping(self.vms[i])
@@ -268,7 +269,7 @@ class SetupTestEnv:
                                                        self.connector.localpath,
                                                        self.connector.key_name + '.pem'))
                 ip = self.ssh_client[i].run(
-                        'ifconfig eth0 | grep "inet\ addr" | cut -d: -f2 | cut -d" " -f1')
+                        'ifconfig eth0 | grep "inet" | cut -d: -f2 | awk -F " " \'{print $2}\' | head -n 1')
                 self.vm_ips[i] = ip[1].strip()
 
     def run_test(self, ssh_vm_conf=0, testname=None, test_cmd=None, results_path=None, raid=False,

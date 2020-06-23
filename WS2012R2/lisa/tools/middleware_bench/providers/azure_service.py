@@ -113,7 +113,7 @@ class AzureConnector:
                                                                                  self.location))
         self.resource_client.resource_groups.create_or_update(self.group_name,
                                                               {'location': self.location})
-        if self.instancetype == 'Standard_NC6':
+        if self.instancetype == 'Standard_NC6' or self.instancetype == 'Standard_D16_v3' or self.instancetype == 'Standard_D64_v3' or self.instancetype == 'Standard_E16_v3':
             sku = 'standard_lrs'
         else:
             sku = 'premium_lrs'

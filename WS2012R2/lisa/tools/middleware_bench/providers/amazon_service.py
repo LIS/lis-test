@@ -146,6 +146,12 @@ class AWSConnector:
         if os_type == 'ubuntu_1604':
             filters={'name':'ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server*', 'root_device_type':'ebs', 'owner-id':'099720109477'}
             log.info("ubuntu_1604")
+        if os_type == 'ubuntu_1804':
+            if self.instancetype == "m6g.4xlarge" or self.instancetype == "a1.4xlarge" or self.instancetype == "a1.metal":
+                filters={'name':'ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-arm64-server*', 'root_device_type':'ebs', 'owner-id':'099720109477'}
+            else:
+                filters={'name':'ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server*', 'root_device_type':'ebs', 'owner-id':'099720109477'}
+            log.info("ubuntu_1804")
         elif os_type == 'amazon_linux':
             filters={'name':'amzn-ami-hvm-*-x86_64-gp2', 'architecture': 'x86_64','root_device_type':'ebs'}
             log.info("amazon_linux")
@@ -173,6 +179,9 @@ class AWSConnector:
         if os_type == 'ubuntu_1604':
             self.device_map[root_device_name] = BlockDeviceType(delete_on_termination = True, size = 30, volume_type = "gp2")
             log.info("device_map ubuntu_1604")
+        if os_type == 'ubuntu_1804':
+            self.device_map[root_device_name] = BlockDeviceType(delete_on_termination = True, size = 30, volume_type = "gp2")
+            log.info("device_map ubuntu_1804")
         elif os_type == 'amazon_linux':
             self.device_map[root_device_name] = BlockDeviceType(delete_on_termination = True, size = 30, volume_type = "gp2")
             log.info("device_map amazon_linux")

@@ -47,17 +47,17 @@ then
     sudo apt install -y aptitude
     printf '.\n.\n.\n.\nY\nY\n' |sudo aptitude install build-essential >> ${LOG_FILE}
     sudo apt -y install build-essential >> ${LOG_FILE}
-    sudo apt -y install sysstat zip bc >> ${LOG_FILE}
+    sudo apt -y install sysstat zip bc cmake>> ${LOG_FILE}
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo apt update"
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo apt install -y aptitude"
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "printf '.\n.\n.\n.\nY\nY\n' |sudo aptitude install build-essential"
-    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo apt -y install sysstat zip bc build-essential" >> ${LOG_FILE}
+    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo apt -y install sysstat zip bc build-essential cmake" >> ${LOG_FILE}
 elif [[ ${distro} == *"Amazon"* ]]
 then
     sudo yum clean dbcache >> ${LOG_FILE}
-    sudo yum -y install sysstat zip bc git gcc automake autoconf rpm >> ${LOG_FILE}
+    sudo yum -y install sysstat zip bc git gcc automake autoconf rpm cmake>> ${LOG_FILE}
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo yum clean dbcache" >> ${LOG_FILE}
-    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo yum -y install sysstat zip bc git gcc automake autoconf rpm" >> ${LOG_FILE}
+    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo yum -y install sysstat zip bc git gcc automake autoconf rpm cmake" >> ${LOG_FILE}
 else
     LogMsg "Unsupported distribution: ${distro}."
 fi
@@ -72,16 +72,16 @@ then
     cd /tmp/ntttcp-for-linux/src; sudo make && sudo make install
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "cd /tmp; git clone https://github.com/Microsoft/ntttcp-for-linux" >> ${LOG_FILE}
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "cd /tmp/ntttcp-for-linux/src; sudo make && sudo make install" >> ${LOG_FILE}
-    cd /tmp; git clone https://github.com/Microsoft/lagscope
-    cd /tmp/lagscope/src; sudo make && sudo make install
+    cd /tmp; git clone https://github.com/Microsoft/lagscope >> ${LOG_FILE}
+    cd /tmp/lagscope; sudo ./do-cmake.sh build && sudo ./do-cmake.sh install >> ${LOG_FILE}
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "cd /tmp; git clone https://github.com/Microsoft/lagscope" >> ${LOG_FILE}
-    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "cd /tmp/lagscope/src; sudo make && sudo make install" >> ${LOG_FILE}
+    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "cd /tmp/lagscope; sudo ./do-cmake.sh build && sudo ./do-cmake.sh install" >> ${LOG_FILE}
 elif [[ ${TEST_TYPE} == "latency" ]]
 then
     cd /tmp; git clone https://github.com/Microsoft/lagscope
-    cd /tmp/lagscope/src; sudo make && sudo make install
+    cd /tmp/lagscope; sudo ./do-cmake.sh build && sudo ./do-cmake.sh install >> ${LOG_FILE}
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "cd /tmp; git clone https://github.com/Microsoft/lagscope" >> ${LOG_FILE}
-    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "cd /tmp/lagscope/src; sudo make && sudo make install" >> ${LOG_FILE}
+    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "cd /tmp/lagscope; sudo ./do-cmake.sh build && sudo ./do-cmake.sh install" >> ${LOG_FILE}
 elif [[ ${TEST_TYPE} == "UDP" ]]
 then
     TEST_THREADS=(1 2 4 8 16 32 64 128 256 512 1024)
@@ -166,7 +166,7 @@ function run_lagscope()
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo pkill -f lagscope"
     ssh -f -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo lagscope -r${SERVER}"
     sleep 5
-    sudo lagscope -s${SERVER} -n1000000 -i0 -V > "/tmp/network${TEST_TYPE}/lagscope.log"
+    sudo lagscope -s${SERVER} -n1000000 -i0 -H > "/tmp/network${TEST_TYPE}/lagscope.log"
     sleep 5
     sudo pkill -f lagscope
 }
@@ -187,15 +187,15 @@ function run_ntttcp ()
     fi
     sudo pkill -f ntttcp
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo pkill -f ntttcp"
-    ssh -f -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo ntttcp -r${SERVER} -P $num_threads_P -e > /tmp/network${TEST_TYPE}/${current_test_threads}_ntttcp-receiver.log"
+    ssh -f -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo ntttcp -r${SERVER} -P $num_threads_P -e -W 1 -C 1 > /tmp/network${TEST_TYPE}/${current_test_threads}_ntttcp-receiver.log"
     sudo pkill -f lagscope
     ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo pkill -f lagscope"
     ssh -f -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo lagscope -r${SERVER}"
     sleep 5
     previous_tx_bytes=$(get_tx_bytes)
     previous_tx_pkts=$(get_tx_pkts)
-    sudo lagscope -s${SERVER} -t 60 -V 4 > "/tmp/network${TEST_TYPE}/${current_test_threads}_lagscope.log"
-    sudo ntttcp -s${SERVER} -P ${num_threads_P} -n ${num_threads_n} -t 60  > "/tmp/network${TEST_TYPE}/${current_test_threads}_ntttcp-sender.log"
+    sudo lagscope -s${SERVER} -t60 > "/tmp/network${TEST_TYPE}/${current_test_threads}_lagscope.log" &
+    sudo ntttcp -s${SERVER} -P ${num_threads_P} -n ${num_threads_n} -t 60 -W 1 -C 1 > "/tmp/network${TEST_TYPE}/${current_test_threads}_ntttcp-sender.log"
     current_tx_bytes=$(get_tx_bytes)
     current_tx_pkts=$(get_tx_pkts)
     bytes_new=`(expr ${current_tx_bytes} - ${previous_tx_bytes})`
@@ -304,7 +304,7 @@ function run_custom()
 if [[ ${TEST_TYPE} == "TCP" ]]
 then
     ulimit -n 204800
-    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "sudo ulimit -n 204800"
+    ssh -o StrictHostKeyChecking=no ${USER}@${SERVER} "ulimit -n 204800"
     for thread in "${TEST_THREADS[@]}"
     do
         run_ntttcp ${thread}
